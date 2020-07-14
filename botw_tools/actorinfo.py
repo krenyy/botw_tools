@@ -11,7 +11,7 @@ BIG_ENDIAN = {b"BY": True, b"YB": False}
 
 
 def read_actorinfo(args: argparse.Namespace):
-    if args.actorinfo.stem == "-":
+    if args.actorinfo.name == "-":
         with sys.stdin.buffer as stdin:
             data = stdin.read()
 
@@ -27,7 +27,7 @@ def read_actorinfo(args: argparse.Namespace):
         args.yaz0 = True
 
     if data[:2] not in (b"BY", b"YB"):
-        raise SystemExit("Invalid file magic")
+        raise SystemExit(f"Invalid BYML file magic (expected b'BY' or b'YB', got {data[:2]})")
 
     args.big_endian = BIG_ENDIAN[data[:2]]
 
@@ -43,7 +43,7 @@ def write_actorinfo(args: argparse.Namespace, actorinfo: oead.byml.Hash):
     data = oead.byml.to_binary(actorinfo, args.big_endian)
     data = oead.yaz0.compress(data) if args.yaz0 else data
 
-    if args.actorinfo.stem == "-":
+    if args.actorinfo.name == "-":
         with sys.stdout.buffer as stdout:
             return stdout.write(data)
 
@@ -71,7 +71,10 @@ def actorinfo_get(args: argparse.Namespace):
 
     entry = actorinfo["Actors"][entry_index]
 
-    print(oead.byml.to_text(entry[args.key] if args.key else entry))
+    try:
+        print(oead.byml.to_text(entry[args.key] if args.key else entry))
+    except KeyError:
+        raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
 
 
 def duplicate_entry(entry: Union[oead.byml.Array, oead.byml.Hash]):
@@ -116,7 +119,7 @@ def actorinfo_duplicate(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.stem != "-":
+    if args.actorinfo.name!= "-":
         print(f"{args.entry_name_from} -> {args.entry_name_to}")
 
 
@@ -143,7 +146,7 @@ def actorinfo_edit(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.stem != "-":
+    if args.actorinfo.name!= "-":
         print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
 
 
@@ -172,7 +175,7 @@ def actorinfo_remove(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.stem != "-":
+    if args.actorinfo.name!= "-":
         print(msg)
 
 
@@ -182,7 +185,7 @@ def parse_args():
     parser.add_argument(
         "actorinfo",
         type=Path,
-        help="Source BYML or YML file (reads from stdin if empty)",
+        help="Source BYML or YML file (reads from stdin if '-')",
     )
     subparsers = parser.add_subparsers(dest="subcommand", help="Subcommand")
     subparsers.required = True

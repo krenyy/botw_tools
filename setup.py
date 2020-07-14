@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="botw_tools",
-    version="0.1.0",
+    version="0.2.0",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A collection of tools for modding Breath of the Wild",
@@ -29,8 +29,7 @@ setup(
             "aamp = botw_tools.aamp:main",
             "byml = botw_tools.byml:main",
             "sarc = botw_tools.sarc:main",
-            "yaz = botw_tools.yaz0:yaz",
-            "unyaz = botw_tools.yaz0:unyaz",
+            "yaz0 = botw_tools.yaz0:main",
             "actorinfo = botw_tools.actorinfo:main",
         ]
     },
