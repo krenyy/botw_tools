@@ -12,8 +12,8 @@ All commands can read from stdin and write to stdout, either automatically or by
 
 To see how to use these commands, please refer either to `command --help` (ex. `aamp --help`) or the examples below.
 
-####Examples:
-####AAMP:
+###Examples:
+**AAMP:**
 ```shell script
 # View a AAMP file
 aamp DgnObj_EntranceElevatorSP.bphysics
@@ -23,7 +23,7 @@ aamp DgnObj_EntranceElevatorSP.bphysics \!!  # Saves as 'DgnObj_EntranceElevator
 # or
 aamp DgnObj_EntranceElevatorSP.bphysics test.yml
 ```
-####Yaz0 and BYML:
+**Yaz0 and BYML:**
 ```shell script
 # View a BYML file
 
@@ -46,7 +46,8 @@ byml ActorInfo.product.byml \!!  # Saves as 'ActorInfo.product.yml'
 # or
 byml ActorInfo.product.byml actorinfo.yml
 ```
-####Yaz0 and SARC:
+**Yaz0 and SARC:**
+
 Decompress and extract a SARC archive `DgnObj_EntranceElevatorSP.sbactorpack` to `elevator` folder:
 ```shell script
 # First variant
@@ -67,7 +68,7 @@ sarc r DgnObj_EntranceElevatorSP.bactorpack \*
 yaz0 DgnObj_EntranceElevatorSP.bactorpack Empty.sbactorpack
 ```
 
-####ActorInfo:
+**ActorInfo:**
 ```shell script
 # Get an entry
 actorinfo ActorInfo.product.(s)byml (g)et DgnObj_EntranceElevatorSP
