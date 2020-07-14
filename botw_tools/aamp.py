@@ -79,5 +79,8 @@ def main():
     if data[:4] == b"AAMP":
         aamp_to_yml(args, data)
 
-    else:
+    elif data[:3] == b"!io":
         yml_to_aamp(args, data)
+
+    else:
+        raise SystemExit("Invalid file")
