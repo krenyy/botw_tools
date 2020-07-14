@@ -155,7 +155,10 @@ def actorinfo_remove(args: argparse.Namespace):
         actorinfo["Actors"].pop(entry_index)
         msg = f"{args.entry_name} removed"
     else:
-        del actorinfo["Actors"][entry_index][args.key]
+        try:
+            del actorinfo["Actors"][entry_index][args.key]
+        except KeyError:
+            raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
         msg = f"{args.entry_name}['{args.key}'] removed"
 
     write_actorinfo(args, actorinfo)
