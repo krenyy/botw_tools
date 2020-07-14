@@ -6,3 +6,4 @@
 * `aamp`: Convert between AAMP and YML
 * `byml`: Convert between BYML and YML
 * `sarc`: Manipulate SARC archives
+* `actorinfo`: Manipulate ActorInfo file
