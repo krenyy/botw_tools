@@ -31,6 +31,7 @@ setup(
             "sarc = botw_tools.sarc:main",
             "yaz = botw_tools.yaz0:yaz",
             "unyaz = botw_tools.yaz0:unyaz",
+            "actorinfo = botw_tools.actorinfo:main",
         ]
     },
 )
