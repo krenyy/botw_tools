@@ -32,6 +32,41 @@ def parse_args():
     return parser.parse_args()
 
 
+def aamp_to_yml(args: argparse.Namespace, data: bytes):
+    pio = oead.aamp.ParameterIO.from_binary(data)
+    out = pio.to_text()
+
+    if not args.dst or args.dst.stem == "-":
+        print(out)
+
+    elif args.dst:
+        if args.dst.stem == "!!":
+            args.dst = guess_dst(False, args.src)
+
+        args.dst.write_text(out)
+        print(args.dst.name)
+
+    else:
+        raise NotImplementedError()
+
+
+def yml_to_aamp(args: argparse.Namespace, data: bytes):
+    pio = oead.aamp.ParameterIO.from_text(data.decode())
+    out = pio.to_binary()
+
+    if not args.dst or args.dst.stem == "!!":
+        args.dst = guess_dst(True, args.src)
+
+        args.dst.write_bytes(out)
+        print(args.dst.name)
+
+    elif args.dst.stem == "-":
+        print(bytes(out))
+
+    else:
+        raise NotImplementedError()
+
+
 def main():
     args = parse_args()
 
@@ -42,37 +77,7 @@ def main():
         data = args.src.read_bytes()
 
     if data[:4] == b"AAMP":
+        aamp_to_yml(args, data)
 
-        pio = oead.aamp.ParameterIO.from_binary(data)
-        out = pio.to_text()
-
-        if not args.dst or args.dst.stem == "-":
-            print(out)
-
-            return 0
-
-        elif args.dst:
-
-            if args.dst.stem == "!!":
-                args.dst = guess_dst(False, args.src)
-
-            args.dst.write_text(out)
-
-            return 0
-
-    pio = oead.aamp.ParameterIO.from_text(data.decode())
-    out = pio.to_binary()
-
-    if not args.dst or args.dst.stem == "-":
-        print(bytes(out))
-
-        return 0
-
-    elif args.dst:
-
-        if args.dst.stem == "!!":
-            args.dst = guess_dst(True, args.src)
-
-        args.dst.write_bytes(out)
-
-        return 0
+    else:
+        yml_to_aamp(args, data)

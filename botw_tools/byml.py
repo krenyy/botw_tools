@@ -40,43 +40,27 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
+def byml_to_yml(args: argparse.Namespace, data: bytes):
+    _byml = oead.byml.from_binary(data)
 
-    if not args.src or args.src.stem == "-":
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
-    else:
-        data = args.src.read_bytes()
+    if not args.dst or args.dst.stem == "-":
+        print(oead.byml.to_text(_byml))
 
-    if data[:4] == b"Yaz0":
-        data = oead.yaz0.decompress(data)
+    elif args.dst:
+        if args.dst.stem == "!!":
+            args.dst = guess_dst(False, yaz0_guess_dst(False, args.src))
 
-    if data[:2] in (b"BY", b"YB"):
-        _byml = oead.byml.from_binary(data)
+        args.dst.write_text(oead.byml.to_text(_byml))
+        print(args.dst.name)
 
-        if not args.dst or args.dst.stem == "-":
-            print(oead.byml.to_text(_byml))
 
-            return 0
-
-        elif args.dst:
-            if args.dst.stem == "!!":
-                args.dst = guess_dst(False, yaz0_guess_dst(False, args.src))
-
-            args.dst.write_text(oead.byml.to_text(_byml))
-            print(args.dst.name)
-
-            return 0
-
+def yml_to_byml(args: argparse.Namespace, data: bytes):
     _byml = oead.byml.from_text(data.decode())
 
     data = oead.byml.to_binary(_byml, args.big_endian)
 
     if not args.dst or args.dst.stem == "-":
         print(bytes(oead.yaz0.compress(data) if True else data))
-
-        return 0
 
     elif args.dst:
         if args.dst.stem == "!!":
@@ -90,4 +74,21 @@ def main():
         )
         print(args.dst.name)
 
-        return 0
+
+def main():
+    args = parse_args()
+
+    if not args.src or args.src.stem == "-":
+        with sys.stdin.buffer as stdin:
+            data = stdin.read()
+    else:
+        data = args.src.read_bytes()
+
+    if data[:4] == b"Yaz0":
+        data = oead.yaz0.decompress(data)
+
+    if data[:2] in (b"BY", b"YB"):
+        byml_to_yml(args, data)
+
+    else:
+        yml_to_byml(args, data)

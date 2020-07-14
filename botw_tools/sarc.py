@@ -1,10 +1,22 @@
+import sys
 from pathlib import Path
 import argparse
 import oead
 
 
 def read_sarc(sarc: Path):
-    data = sarc.read_bytes()
+    if sarc.stem == "-":
+        with sys.stdin.buffer as stdin:
+            data = stdin.read()
+
+    elif sarc.is_file():
+        data = sarc.read_bytes()
+
+    else:
+        print(f"'{sarc.name}' doesn't exist")
+
+        raise SystemExit(1)
+
     data = oead.yaz0.decompress(data) if data[:4] == b"Yaz0" else data
 
     if data[:4] != b"SARC":
@@ -30,16 +42,12 @@ def sarc_extract(args: argparse.Namespace):
             else f"{args.sarc.stem}/{file.name}"
         )
 
-    return 0
-
 
 def sarc_list(args: argparse.Namespace):
     sarc = read_sarc(args.sarc)
 
     for file in sarc.get_files():
-        print(f"{file.name} [{hex(len(file.data))}]")
-
-    return 0
+        print(f"{file.name}{f' [{hex(len(file.data))}]' if args.show_sizes else ''}")
 
 
 def sarc_create(args: argparse.Namespace):
@@ -62,9 +70,12 @@ def sarc_create(args: argparse.Namespace):
         else data
     )
 
-    args.sarc.write_bytes(data)
+    if args.sarc == "-":
+        print(bytes(data))
 
-    return 0
+    else:
+        args.sarc.write_bytes(data)
+        print(args.sarc.name)
 
 
 def sarc_update(args: argparse.Namespace):
@@ -78,12 +89,13 @@ def sarc_update(args: argparse.Namespace):
     data = sarc.write()[1]
     data = oead.yaz0.compress(data) if args.sarc.suffix.startswith(".s") else data
 
+    if args.sarc.stem == "-":
+        print(bytes(data))
+
     args.sarc.write_bytes(data)
 
-    return 0
 
-
-def sarc_delete(args: argparse.Namespace):
+def sarc_remove(args: argparse.Namespace):
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     for file in sarc.files.items():
@@ -93,9 +105,11 @@ def sarc_delete(args: argparse.Namespace):
     data = sarc.write()[1]
     data = oead.yaz0.compress(data) if args.sarc.suffix.startswith(".s") else data
 
-    args.sarc.write_bytes(data)
+    if args.sarc.stem == "-":
+        print(bytes(data))
 
-    return 0
+    else:
+        args.sarc.write_bytes(data)
 
 
 def parse_args():
@@ -117,6 +131,7 @@ def parse_args():
         "list", help="List contents of SARC archive", aliases=["l"]
     )
     subparser_list.add_argument("sarc", type=Path, help="SARC to list contents of")
+    subparser_list.add_argument("-s", '--show_sizes', action='store_true', help="Show sizes of files")
     subparser_list.set_defaults(func=sarc_list)
 
     subparser_create = subparsers.add_parser(
@@ -144,13 +159,13 @@ def parse_args():
     subparser_update.set_defaults(func=sarc_update)
 
     subparser_delete = subparsers.add_parser(
-        "delete", help="Delete a file from SARC", aliases=["d"]
+        "remove", help="Remove files from SARC", aliases=["r"]
     )
-    subparser_delete.add_argument("sarc", type=Path, help="SARC to delete files from")
+    subparser_delete.add_argument("sarc", type=Path, help="SARC to remove files from")
     subparser_delete.add_argument(
-        "files", type=str, nargs="+", help="Files to delete from the SARC"
+        "files", type=str, nargs="+", help="Files to remove from the SARC"
     )
-    subparser_delete.set_defaults(func=sarc_delete)
+    subparser_delete.set_defaults(func=sarc_remove)
 
     return parser.parse_args()
 

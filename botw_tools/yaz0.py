@@ -70,6 +70,7 @@ def unyaz():
         return 0
 
     args.dst.write_bytes(decompressed)
+    print(args.dst.name)
 
     return 0
 
@@ -94,5 +95,6 @@ def yaz():
         return 0
 
     args.dst.write_bytes(compressed)
+    print(args.dst.name)
 
     return 0
