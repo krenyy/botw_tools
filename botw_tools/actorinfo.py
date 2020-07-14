@@ -128,12 +128,15 @@ def actorinfo_edit(args: argparse.Namespace):
 
     entry = actorinfo["Actors"][entry_index]
 
-    value_before = entry[args.key]
+    try:
+        value_before = entry[args.key]
+    except KeyError:
+        value_before = None
     entry[args.key] = args.value
     value_after = entry[args.key]
 
     write_actorinfo(args, actorinfo)
-    print(f"{args.entry_name} / {args.key}: '{value_before}' -> '{value_after}'")
+    print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
 
 
 def actorinfo_remove(args: argparse.Namespace):
@@ -147,11 +150,16 @@ def actorinfo_remove(args: argparse.Namespace):
     entry_index = list(actorinfo["Hashes"]).index(
         oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash))
 
-    actorinfo["Hashes"].pop(entry_index)
-    actorinfo["Actors"].pop(entry_index)
+    if not args.key:
+        actorinfo["Hashes"].pop(entry_index)
+        actorinfo["Actors"].pop(entry_index)
+        msg = f"{args.entry_name} removed"
+    else:
+        del actorinfo["Actors"][entry_index][args.key]
+        msg = f"{args.entry_name}['{args.key}'] removed"
 
     write_actorinfo(args, actorinfo)
-    print(f"{args.entry_name} removed")
+    print(msg)
 
 
 def parse_args():
@@ -204,6 +212,9 @@ def parse_args():
     )
     subparser_remove.add_argument(
         "entry_name", type=str, help="Name of the entry to remove"
+    )
+    subparser_remove.add_argument(
+        "key", type=str, nargs="?", help="Name of the key to remove (entry stays)"
     )
     subparser_remove.set_defaults(func=actorinfo_remove)
 
