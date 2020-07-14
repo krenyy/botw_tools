@@ -65,7 +65,8 @@ def unyaz():
         args.dst = guess_dst(False, args.src)
 
     if args.dst.stem == "-":
-        print(bytes(decompressed))
+        with sys.stdout.buffer as stdout:
+            stdout.write(decompressed)
 
         return 0
 
@@ -90,7 +91,8 @@ def yaz():
         args.dst = guess_dst(True, args.src)
 
     if args.dst.stem == "-":
-        print(bytes(compressed))
+        with sys.stdout.buffer as stdout:
+            stdout.write(compressed)
 
         return 0
 

@@ -61,7 +61,8 @@ def yml_to_aamp(args: argparse.Namespace, data: bytes):
         print(args.dst.name)
 
     elif args.dst.stem == "-":
-        print(bytes(out))
+        with sys.stdout.buffer as stdout:
+            stdout.write(out)
 
     else:
         raise NotImplementedError()

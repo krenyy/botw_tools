@@ -31,14 +31,14 @@ def sarc_extract(args: argparse.Namespace):
     for file in sarc.get_files():
         path = (
             (args.folder / file.name)
-            if args.folder
+            if args.folder and args.folder.stem != "-"
             else (args.sarc.parent / args.sarc.stem / file.name)
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(bytes(file.data))
         print(
             f"{args.folder.stem}/{file.name}"
-            if args.folder
+            if args.folder and args.folder.stem != "-"
             else f"{args.sarc.stem}/{file.name}"
         )
 
@@ -56,7 +56,7 @@ def sarc_create(args: argparse.Namespace):
     )
 
     for file in args.folder.glob("**/*.*"):
-        sarc.files[str(file)[len(str(args.folder)) + 1 :]] = oead.Bytes(
+        sarc.files[str(file)[len(str(args.folder)) + 1:]] = oead.Bytes(
             file.read_bytes()
         )
 
@@ -66,12 +66,13 @@ def sarc_create(args: argparse.Namespace):
     data = sarc.write()[1]
     data = (
         oead.yaz0.compress(data)
-        if args.sarc.suffix.startswith(".s") or args.yaz0
+        if (args.sarc.suffix.startswith(".s") and not args.sarc.suffix == ".sarc") or args.yaz0
         else data
     )
 
-    if args.sarc == "-":
-        print(bytes(data))
+    if args.sarc.stem == "-":
+        with sys.stdout.buffer as stdout:
+            stdout.write(data)
 
     else:
         args.sarc.write_bytes(data)
@@ -82,7 +83,7 @@ def sarc_update(args: argparse.Namespace):
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     for file in args.folder.glob("**/*.*"):
-        sarc.files[str(file)[len(str(args.folder)) + 1 :]] = oead.Bytes(
+        sarc.files[str(file)[len(str(args.folder)) + 1:]] = oead.Bytes(
             file.read_bytes()
         )
 
@@ -90,7 +91,8 @@ def sarc_update(args: argparse.Namespace):
     data = oead.yaz0.compress(data) if args.sarc.suffix.startswith(".s") else data
 
     if args.sarc.stem == "-":
-        print(bytes(data))
+        with sys.stdout.buffer as stdout:
+            stdout.write(data)
 
     args.sarc.write_bytes(data)
 
@@ -106,7 +108,8 @@ def sarc_remove(args: argparse.Namespace):
     data = oead.yaz0.compress(data) if args.sarc.suffix.startswith(".s") else data
 
     if args.sarc.stem == "-":
-        print(bytes(data))
+        with sys.stdout.buffer as stdout:
+            stdout.write(data)
 
     else:
         args.sarc.write_bytes(data)

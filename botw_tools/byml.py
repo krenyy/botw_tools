@@ -60,7 +60,8 @@ def yml_to_byml(args: argparse.Namespace, data: bytes):
     data = oead.byml.to_binary(_byml, args.big_endian)
 
     if not args.dst or args.dst.stem == "-":
-        print(bytes(oead.yaz0.compress(data) if True else data))
+        with sys.stdout.buffer as stdout:
+            stdout.write(oead.yaz0.compress(data) if True else data)
 
     elif args.dst:
         if args.dst.stem == "!!":

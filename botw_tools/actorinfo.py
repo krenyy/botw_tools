@@ -112,7 +112,9 @@ def actorinfo_duplicate(args: argparse.Namespace):
     actorinfo["Actors"].insert(entry_index_to, entry)
 
     write_actorinfo(args, actorinfo)
-    print(f"{args.entry_name_from} -> {args.entry_name_to}")
+
+    if args.actorinfo.stem != "-":
+        print(f"{args.entry_name_from} -> {args.entry_name_to}")
 
 
 def actorinfo_edit(args: argparse.Namespace):
@@ -136,7 +138,9 @@ def actorinfo_edit(args: argparse.Namespace):
     value_after = entry[args.key]
 
     write_actorinfo(args, actorinfo)
-    print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
+
+    if args.actorinfo.stem != "-":
+        print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
 
 
 def actorinfo_remove(args: argparse.Namespace):
@@ -162,7 +166,9 @@ def actorinfo_remove(args: argparse.Namespace):
         msg = f"{args.entry_name}['{args.key}'] removed"
 
     write_actorinfo(args, actorinfo)
-    print(msg)
+
+    if args.actorinfo.stem != "-":
+        print(msg)
 
 
 def parse_args():
