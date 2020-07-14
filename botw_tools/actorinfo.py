@@ -133,7 +133,7 @@ def actorinfo_edit(args: argparse.Namespace):
     value_after = entry[args.key]
 
     write_actorinfo(args, actorinfo)
-    print(f"{args.entry_name}['{args.key}']: {value_before} -> {value_after}")
+    print(f"{args.entry_name} / {args.key}: '{value_before}' -> '{value_after}'")
 
 
 def actorinfo_remove(args: argparse.Namespace):
@@ -207,7 +207,7 @@ def parse_args():
     )
     subparser_remove.set_defaults(func=actorinfo_remove)
 
-    return parser.parse_args(["ActorInfo.product.sbyml", "e", "Obj_TreeGhost_A_02", "mainModel", "Obj_TreeGhost_A_02"])
+    return parser.parse_args()
 
 
 def main():
