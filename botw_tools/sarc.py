@@ -56,7 +56,7 @@ def sarc_create(args: argparse.Namespace):
     )
 
     for file in args.folder.glob("**/*.*"):
-        sarc.files[str(file)[len(str(args.folder)) + 1:]] = oead.Bytes(
+        sarc.files[str(file)[len(str(args.folder)) + 1 :]] = oead.Bytes(
             file.read_bytes()
         )
 
@@ -66,7 +66,8 @@ def sarc_create(args: argparse.Namespace):
     data = sarc.write()[1]
     data = (
         oead.yaz0.compress(data)
-        if (args.sarc.suffix.startswith(".s") and not args.sarc.suffix == ".sarc") or args.yaz0
+        if (args.sarc.suffix.startswith(".s") and not args.sarc.suffix == ".sarc")
+        or args.yaz0
         else data
     )
 
@@ -83,7 +84,7 @@ def sarc_update(args: argparse.Namespace):
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     for file in args.folder.glob("**/*.*"):
-        sarc.files[str(file)[len(str(args.folder)) + 1:]] = oead.Bytes(
+        sarc.files[str(file)[len(str(args.folder)) + 1 :]] = oead.Bytes(
             file.read_bytes()
         )
 
@@ -134,7 +135,9 @@ def parse_args():
         "list", help="List contents of SARC archive", aliases=["l"]
     )
     subparser_list.add_argument("sarc", type=Path, help="SARC to list contents of")
-    subparser_list.add_argument("-s", '--show_sizes', action='store_true', help="Show sizes of files")
+    subparser_list.add_argument(
+        "-s", "--show_sizes", action="store_true", help="Show sizes of files"
+    )
     subparser_list.set_defaults(func=sarc_list)
 
     subparser_create = subparsers.add_parser(

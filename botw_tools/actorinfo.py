@@ -7,10 +7,7 @@ from typing import Union
 import oead
 from zlib import crc32
 
-BIG_ENDIAN = {
-    b"BY": True,
-    b"YB": False
-}
+BIG_ENDIAN = {b"BY": True, b"YB": False}
 
 
 def read_actorinfo(args: argparse.Namespace):
@@ -69,7 +66,8 @@ def actorinfo_get(args: argparse.Namespace):
         raise SystemExit(f"'{args.entry_name}' doesn't exist in this file")
 
     entry_index = list(actorinfo["Hashes"]).index(
-        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash))
+        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash)
+    )
 
     entry = actorinfo["Actors"][entry_index]
 
@@ -77,9 +75,11 @@ def actorinfo_get(args: argparse.Namespace):
 
 
 def duplicate_entry(entry: Union[oead.byml.Array, oead.byml.Hash]):
-    entry = oead.byml.Hash(dict(entry))\
-        if isinstance(entry, oead.byml.Hash)\
+    entry = (
+        oead.byml.Hash(dict(entry))
+        if isinstance(entry, oead.byml.Hash)
         else oead.byml.Array(list(entry))
+    )
 
     for k, v in entry.items():
         if isinstance(v, oead.byml.Hash) or isinstance(v, oead.byml.Array):
@@ -97,7 +97,10 @@ def actorinfo_duplicate(args: argparse.Namespace):
         raise SystemExit(f"'{args.entry_name_from}' doesn't exist in this file")
 
     entry_index_from = list(actorinfo["Hashes"]).index(
-        oead.U32(entry_hash_from) if entry_hash_from > 0x80000000 else oead.S32(entry_hash_from))
+        oead.U32(entry_hash_from)
+        if entry_hash_from > 0x80000000
+        else oead.S32(entry_hash_from)
+    )
 
     entry = duplicate_entry(actorinfo["Actors"][entry_index_from])
     entry["name"] = args.entry_name_to
@@ -126,7 +129,8 @@ def actorinfo_edit(args: argparse.Namespace):
         raise SystemExit(f"'{args.entry_name}' doesn't exist in this file")
 
     entry_index = list(actorinfo["Hashes"]).index(
-        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash))
+        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash)
+    )
 
     entry = actorinfo["Actors"][entry_index]
 
@@ -152,7 +156,8 @@ def actorinfo_remove(args: argparse.Namespace):
         raise SystemExit(f"'{args.entry_name}' doesn't exist in this file")
 
     entry_index = list(actorinfo["Hashes"]).index(
-        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash))
+        oead.U32(entry_hash) if entry_hash > 0x80000000 else oead.S32(entry_hash)
+    )
 
     if not args.key:
         actorinfo["Hashes"].pop(entry_index)
@@ -185,12 +190,8 @@ def parse_args():
     subparser_get = subparsers.add_parser(
         "get", help="Get entry from ActorInfo", aliases=["g"]
     )
-    subparser_get.add_argument(
-        "entry_name", type=str, help="Name of the entry"
-    )
-    subparser_get.add_argument(
-        "key", type=str, nargs="?", help="Key"
-    )
+    subparser_get.add_argument("entry_name", type=str, help="Name of the entry")
+    subparser_get.add_argument("key", type=str, nargs="?", help="Key")
     subparser_get.set_defaults(func=actorinfo_get)
 
     subparser_duplicate = subparsers.add_parser(
@@ -205,19 +206,17 @@ def parse_args():
     subparser_duplicate.set_defaults(func=actorinfo_duplicate)
 
     subparser_edit = subparsers.add_parser(
-        'edit', help="Edit ActorInfo entry", aliases=['e']
+        "edit", help="Edit ActorInfo entry", aliases=["e"]
     )
     subparser_edit.add_argument(
         "entry_name", type=str, help="Name of the entry to edit"
     )
-    subparser_edit.add_argument(
-        'key', type=str, help="Key to edit"
-    )
-    subparser_edit.add_argument('value', help="Value")
+    subparser_edit.add_argument("key", type=str, help="Key to edit")
+    subparser_edit.add_argument("value", help="Value")
     subparser_edit.set_defaults(func=actorinfo_edit)
 
     subparser_remove = subparsers.add_parser(
-        'remove', help="Remove an entry from ActorInfo", aliases=["r"]
+        "remove", help="Remove an entry from ActorInfo", aliases=["r"]
     )
     subparser_remove.add_argument(
         "entry_name", type=str, help="Name of the entry to remove"
