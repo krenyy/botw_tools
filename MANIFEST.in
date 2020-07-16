@@ -1,0 +1,2 @@
+include requirements.txt
+exclude botw_tools/__main__.py
