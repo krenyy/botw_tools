@@ -1,25 +1,16 @@
 import argparse
 import bisect
-import sys
 from pathlib import Path
 from typing import Union
-
-import oead
 from zlib import crc32
 
-BIG_ENDIAN = {b"BY": True, b"YB": False}
+import oead
+
+from .common import write, read, write_stdout
 
 
-def read_actorinfo(args: argparse.Namespace):
-    if args.actorinfo.name == "-":
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
-
-    elif args.actorinfo.is_file():
-        data = args.actorinfo.read_bytes()
-
-    else:
-        raise SystemExit(f"'{args.actorinfo.name}' doesn't exist")
+def read_actorinfo(args: argparse.Namespace) -> oead.byml.Hash:
+    data = read(src=args.actorinfo)
 
     args.yaz0 = False
     if data[:4] == b"Yaz0":
@@ -27,33 +18,23 @@ def read_actorinfo(args: argparse.Namespace):
         args.yaz0 = True
 
     if data[:2] not in (b"BY", b"YB"):
-        raise SystemExit(
-            f"Invalid BYML file magic (expected b'BY' or b'YB', got {data[:2]})"
-        )
+        raise SystemExit(f"Invalid file")
 
-    args.big_endian = BIG_ENDIAN[data[:2]]
+    args.big_endian = True if data[:2] == b"BY" else False
 
     actorinfo = oead.byml.from_binary(data)
 
-    if not ("Actors" in actorinfo.keys() and "Hashes" in actorinfo.keys()):
-        raise SystemExit("Invalid ActorInfo file")
+    if ("Actors", "Hashes") != tuple(actorinfo.keys()):
+        raise SystemExit("Invalid file")
 
     return actorinfo
 
 
-def write_actorinfo(args: argparse.Namespace, actorinfo: oead.byml.Hash):
+def write_actorinfo(args: argparse.Namespace, actorinfo: oead.byml.Hash) -> int:
     data = oead.byml.to_binary(actorinfo, args.big_endian)
     data = oead.yaz0.compress(data) if args.yaz0 else data
 
-    if args.actorinfo.name == "-":
-        with sys.stdout.buffer as stdout:
-            return stdout.write(data)
-
-    elif args.actorinfo.is_file():
-        return args.actorinfo.write_bytes(data)
-
-    else:
-        raise SystemExit(f"'{args.actorinfo.name}' doesn't exist")
+    return write(data=data, dst=args.actorinfo)
 
 
 def convert_hash(x: int) -> Union[oead.S32, oead.U32]:
@@ -74,7 +55,7 @@ def actorinfo_get(args: argparse.Namespace):
     entry = actorinfo["Actors"][entry_index]
 
     try:
-        print(oead.byml.to_text(entry[args.key] if args.key else entry))
+        write_stdout(oead.byml.to_text(entry[args.key] if args.key else entry).encode('utf-8'))
     except KeyError:
         raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
 
@@ -93,7 +74,7 @@ def duplicate_entry(entry: Union[oead.byml.Array, oead.byml.Hash]):
     return entry
 
 
-def actorinfo_duplicate(args: argparse.Namespace):
+def actorinfo_duplicate(args: argparse.Namespace) -> int:
     actorinfo = read_actorinfo(args)
 
     entry_hash_from = crc32(args.entry_name_from.encode())
@@ -119,13 +100,13 @@ def actorinfo_duplicate(args: argparse.Namespace):
     actorinfo["Hashes"].insert(entry_index_to, convert_hash(entry_hash_to))
     actorinfo["Actors"].insert(entry_index_to, entry)
 
+    write_stdout(f"{args.entry_name_from} -> {args.entry_name_to}".encode(
+        'utf-8')) if args.actorinfo and args.actorinfo.name != '-' else None
     write_actorinfo(args, actorinfo)
-
-    if args.actorinfo.name != "-":
-        print(f"{args.entry_name_from} -> {args.entry_name_to}")
+    return 0
 
 
-def actorinfo_edit(args: argparse.Namespace):
+def actorinfo_edit(args: argparse.Namespace) -> int:
     actorinfo = read_actorinfo(args)
 
     entry_hash = crc32(args.entry_name.encode())
@@ -146,13 +127,13 @@ def actorinfo_edit(args: argparse.Namespace):
     entry[args.key] = args.value
     value_after = entry[args.key]
 
+    write_stdout(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'".encode(
+        'utf-8')) if args.actorinfo and args.actorinfo.name != '-' else None
     write_actorinfo(args, actorinfo)
-
-    if args.actorinfo.name != "-":
-        print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
+    return 0
 
 
-def actorinfo_remove(args: argparse.Namespace):
+def actorinfo_remove(args: argparse.Namespace) -> int:
     actorinfo = read_actorinfo(args)
 
     entry_hash = crc32(args.entry_name.encode())
@@ -167,21 +148,20 @@ def actorinfo_remove(args: argparse.Namespace):
     if not args.key:
         actorinfo["Hashes"].pop(entry_index)
         actorinfo["Actors"].pop(entry_index)
-        msg = f"{args.entry_name} removed"
+        msg = f"{args.entry_name} removed".encode('utf-8')
     else:
         try:
             del actorinfo["Actors"][entry_index][args.key]
         except KeyError:
             raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
-        msg = f"{args.entry_name}['{args.key}'] removed"
+        msg = f"{args.entry_name}['{args.key}'] removed".encode('utf-8')
 
+    write_stdout(msg) if args.actorinfo and args.actorinfo.name != '-' else None
     write_actorinfo(args, actorinfo)
-
-    if args.actorinfo.name != "-":
-        print(msg)
+    return 0
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert between BYML and YML")
 
     parser.add_argument(
@@ -234,6 +214,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> int:
     args = parse_args()
-    args.func(args)
+    return args.func(args)

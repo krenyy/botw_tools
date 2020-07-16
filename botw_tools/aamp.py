@@ -3,19 +3,17 @@ from pathlib import Path
 
 import oead
 
-from .common import write_stdout, read_stdin
+from .common import write, read
 
 
-def guess_dst(_aamp: bool, path: Path) -> Path:
-    if _aamp:
-        return (
-            path.with_name(f"{path.stem}.aamp")
-            if path.name.count(".") < 2
-            else path.with_name(
-                f"{path.name.split('.')[0]}.b{path.name.split('.')[-2]}"
-            )
+def guess_dst(_aamp: bool, dst: Path) -> Path:
+    return (
+        dst.with_name(f"{dst.stem}.aamp")
+        if dst.name.count(".") < 2
+        else dst.with_name(
+            f"{dst.name.split('.')[0]}.b{dst.name.split('.')[-2]}"
         )
-    return path.with_suffix(f".{path.suffix[2:]}.yml")
+    ) if _aamp else dst.with_suffix(f".{dst.suffix[2:]}.yml")
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,40 +37,21 @@ def parse_args() -> argparse.Namespace:
 
 def aamp_to_yml(args: argparse.Namespace, data: bytes) -> int:
     out = oead.aamp.ParameterIO.from_binary(data).to_text().encode("utf-8")
+    write(data=out, src=args.src, dst=args.dst, condition=False, function=guess_dst)
 
-    if not args.dst or args.dst.name == "-":
-        write_stdout(out)
-        return 0
-
-    elif args.dst.name == "!!":
-        args.dst = guess_dst(False, args.src)
-
-    args.dst.write_bytes(out)
-    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
     return 0
 
 
 def yml_to_aamp(args: argparse.Namespace, data: bytes) -> int:
     out = oead.aamp.ParameterIO.from_text(data.decode("utf-8")).to_binary()
+    write(data=out, src=args.src, dst=args.dst, condition=True, function=guess_dst)
 
-    if not args.dst or args.dst.name == "-":
-        write_stdout(out)
-        return 0
-
-    if args.dst.name == "!!":
-        args.dst = guess_dst(True, args.src)
-
-    args.dst.write_bytes(out)
-    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
     return 0
 
 
 def main() -> int:
     args = parse_args()
-
-    data = (
-        read_stdin() if not args.src or args.src.name == "-" else args.src.read_bytes()
-    )
+    data = read(src=args.src)
 
     if data[:4] == b"AAMP":
         return aamp_to_yml(args, data)

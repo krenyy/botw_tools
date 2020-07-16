@@ -4,36 +4,22 @@ from typing import List
 
 import oead
 
-from .common import read_stdin, write_stdout
+from .common import write_stdout, read, write
 
 
-def read_sarc(path: Path) -> oead.Sarc:
-    if not path or path.name == "-":
-        data = read_stdin()
-    elif path.is_file():
-        data = path.read_bytes()
-    else:
-        raise SystemExit(f"'{path.name}' doesn't exist or is not a file")
+def read_sarc(src: Path) -> oead.Sarc:
+    data = read(src=src)
 
     if data[:4] == b"Yaz0":
         raise SystemExit("File is Yaz-0 compressed")
-
     if data[:4] != b"SARC":
         raise SystemExit("Invalid file")
 
     return oead.Sarc(data)
 
 
-def write_sarc(sarc: oead.SarcWriter, path: Path) -> int:
-    data = sarc.write()[1]
-
-    write_stdout(
-        f"Written '{path.name}'\n".encode("utf-8")
-    ) if path and path.name != "-" else None
-
-    return (
-        write_stdout(data) if not path or path.name == "-" else path.write_bytes(data)
-    )
+def write_sarc(sarc: oead.SarcWriter, dst: Path) -> int:
+    return write(data=sarc.write()[1], src=None, dst=dst, condition=None, function=None)
 
 
 def sarc_create(args: argparse.Namespace) -> int:
@@ -45,7 +31,8 @@ def sarc_create(args: argparse.Namespace) -> int:
         raise SystemExit("You cannot pipe in a folder")
 
     for f in args.folder.glob("**/*.*"):
-        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = f.read_bytes()
+        if f.is_file():
+            sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = f.read_bytes()
 
     if args.sarc and args.sarc.name == "!!":
         args.sarc = args.folder.with_suffix(".pack")
@@ -70,6 +57,9 @@ def sarc_extract(args: argparse.Namespace) -> int:
         raise SystemExit(
             "You must provide a destination folder when using input from pipe"
         )
+
+    if args.folder.exists():
+        raise SystemExit(f"'{args.folder.name}' already exists")
 
     for file in sarc.get_files():
         path = base / file.name
@@ -105,6 +95,9 @@ def sarc_update(args: argparse.Namespace) -> int:
 
     if not args.folder or args.folder.name == "-":
         raise SystemExit("You cannot pipe in a folder")
+
+    if args.folder.exists():
+        raise SystemExit(f"'{args.folder.name}' already exists")
 
     files = [f for f in args.folder.glob("**/*.*")]
 
@@ -227,5 +220,4 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-
     return args.func(args)

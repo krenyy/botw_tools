@@ -3,17 +3,14 @@ from pathlib import Path
 
 import oead
 
-from .common import read_stdin, write_stdout
+from .common import read_stdin, write_stdout, write, read
 
 
-def guess_dst(_byml: bool, path: Path) -> Path:
-    if _byml:
-        if "mubin.yml" in path.name:
-            return path.with_name(".".join(path.name.split(".")[:2]))
-        return path.with_suffix(f".b{path.suffix[1:]}")
-    if "mubin" in path.suffix:
-        return path.with_suffix(".mubin.yml")
-    return path.with_suffix(f".{path.suffix[2:]}")
+def guess_dst(_byml: bool, dst: Path) -> Path:
+    if "mubin" in dst.name:
+        return dst.with_name(".".join(dst.name.split(".")[:2])) if _byml else path.with_suffix(".mubin.yml")
+    else:
+        return dst.with_suffix(f".b{dst.suffix[1:]}") if _byml else path.with_suffix(f".{path.suffix[2:]}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,42 +37,29 @@ def parse_args() -> argparse.Namespace:
 
 def byml_to_yml(args: argparse.Namespace, data: bytes) -> int:
     out = oead.byml.to_text(oead.byml.from_binary(data)).encode("utf-8")
+    write(data=out, src=args.src, dst=args.dst, condition=True, function=guess_dst)
 
-    if not args.dst or args.dst.name == "-":
-        write_stdout(out)
-        return 0
-
-    if args.dst.name == "!!":
-        args.dst = guess_dst(False, args.src)
-
-    args.dst.write_bytes(out)
-    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
     return 0
 
 
 def yml_to_byml(args: argparse.Namespace, data: bytes) -> int:
-    data = oead.byml.to_binary(
-        oead.byml.from_text(data.decode("utf-8")), args.big_endian
-    )
+    try:
+        out = oead.byml.to_binary(
+            oead.byml.from_text(data.decode("utf-8")), args.big_endian
+        )
+    except Exception as e:
+        write_stdout(f"{type(e)}\n".encode('utf-8'))
+        write_stdout(f"{str(e)}\n".encode('utf-8'))
+        raise SystemExit("Invalid file")
 
-    if not args.dst or args.dst.name == "-":
-        write_stdout(data)
-        return 0
+    write(data=out, src=args.src, dst=args.dst, condition=True, function=guess_dst)
 
-    if args.dst.name == "!!":
-        args.dst = guess_dst(True, args.src)
-
-    args.dst.write_bytes(data)
-    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
     return 0
 
 
 def main() -> int:
     args = parse_args()
-
-    data = (
-        read_stdin() if not args.src or args.src.name == "-" else args.src.read_bytes()
-    )
+    data = read(args.src)
 
     if data[:4] == b"Yaz0":
         raise SystemExit("File is Yaz-0 compressed")
