@@ -1,10 +1,12 @@
 import argparse
-import sys
 from pathlib import Path
+
 import oead
 
+from .common import read_stdin, write_stdout
 
-def guess_dst(_byml: bool, path: Path):
+
+def guess_dst(_byml: bool, path: Path) -> Path:
     if _byml:
         if "mubin.yml" in path.name:
             return path.with_name(".".join(path.name.split(".")[:2]))
@@ -14,7 +16,7 @@ def guess_dst(_byml: bool, path: Path):
     return path.with_suffix(f".{path.suffix[2:]}")
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert between BYML and YML")
 
     parser.add_argument(
@@ -30,58 +32,54 @@ def parse_args():
         "dst",
         type=Path,
         nargs="?",
-        help="Destination AAMP or YML file (writes to stdout if empty or '-')",
+        help="Destination AAMP or YML file (writes to stdout if empty or '-', '!!' to guess filename)",
     )
 
     return parser.parse_args()
 
 
-def byml_to_yml(args: argparse.Namespace, data: bytes):
-    _byml = oead.byml.from_binary(data)
+def byml_to_yml(args: argparse.Namespace, data: bytes) -> int:
+    out = oead.byml.to_text(oead.byml.from_binary(data)).encode("utf-8")
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(oead.byml.to_text(_byml).encode("utf-8"))
+        write_stdout(out)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(False, args.src)
+    if args.dst.name == "!!":
+        args.dst = guess_dst(False, args.src)
 
-        args.dst.write_bytes(oead.byml.to_text(_byml).encode("utf-8"))
-        print(args.dst.name)
+    args.dst.write_bytes(out)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def yml_to_byml(args: argparse.Namespace, data: bytes):
-    _byml = oead.byml.from_text(data.decode())
-
-    data = oead.byml.to_binary(_byml, args.big_endian)
+def yml_to_byml(args: argparse.Namespace, data: bytes) -> int:
+    data = oead.byml.to_binary(
+        oead.byml.from_text(data.decode("utf-8")), args.big_endian
+    )
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(data)
+        write_stdout(data)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(True, args.src)
+    if args.dst.name == "!!":
+        args.dst = guess_dst(True, args.src)
 
-        args.dst.write_bytes(data)
-        print(args.dst.name)
+    args.dst.write_bytes(data)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def main():
+def main() -> int:
     args = parse_args()
 
-    if not args.src or args.src.name == "-":
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
-    else:
-        data = args.src.read_bytes()
+    data = (
+        read_stdin() if not args.src or args.src.name == "-" else args.src.read_bytes()
+    )
 
     if data[:4] == b"Yaz0":
         raise SystemExit("File is Yaz-0 compressed")
-
     if data[:2] in (b"BY", b"YB"):
-        byml_to_yml(args, data)
-
+        return byml_to_yml(args, data)
     else:
-        yml_to_byml(args, data)
+        return yml_to_byml(args, data)

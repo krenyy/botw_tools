@@ -1,85 +1,82 @@
 import argparse
+from pathlib import Path
 
 import oead
-from pathlib import Path
-import sys
+
+from .common import write_stdout, read_stdin
 
 
-def guess_dst(_aamp: bool, path: Path):
+def guess_dst(_aamp: bool, path: Path) -> Path:
     if _aamp:
-        return path.with_suffix("").with_suffix(
-            f".b{path.name.split('.')[-2].lstrip('.')}"
+        return (
+            path.with_name(f"{path.stem}.aamp")
+            if path.name.count(".") < 2
+            else path.with_name(
+                f"{path.name.split('.')[0]}.b{path.name.split('.')[-2]}"
+            )
         )
     return path.with_suffix(f".{path.suffix[2:]}.yml")
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert between AAMP and YML")
 
     parser.add_argument(
         "src",
         type=Path,
         nargs="?",
-        help="Source AAMP or YML file (reads from stdin if empty)",
+        help="Source AAMP or YML file (reads from stdin if empty or '-')",
     )
     parser.add_argument(
         "dst",
         type=Path,
         nargs="?",
-        help="Destination AAMP or YML file (writes to stdout if empty)",
+        help="Destination AAMP or YML file (writes to stdout if empty or '-', '!!' to guess filename)",
     )
 
     return parser.parse_args()
 
 
-def aamp_to_yml(args: argparse.Namespace, data: bytes):
-    pio = oead.aamp.ParameterIO.from_binary(data)
-    out = pio.to_text()
+def aamp_to_yml(args: argparse.Namespace, data: bytes) -> int:
+    out = oead.aamp.ParameterIO.from_binary(data).to_text().encode("utf-8")
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(out.encode("utf-8"))
+        write_stdout(out)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(False, args.src)
+    elif args.dst.name == "!!":
+        args.dst = guess_dst(False, args.src)
 
-        args.dst.write_bytes(out.encode("utf-8"))
-        print(args.dst.name)
+    args.dst.write_bytes(out)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def yml_to_aamp(args: argparse.Namespace, data: bytes):
-    pio = oead.aamp.ParameterIO.from_text(data.decode())
-    out = pio.to_binary()
+def yml_to_aamp(args: argparse.Namespace, data: bytes) -> int:
+    out = oead.aamp.ParameterIO.from_text(data.decode("utf-8")).to_binary()
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(out)
+        write_stdout(out)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(True, args.src)
+    if args.dst.name == "!!":
+        args.dst = guess_dst(True, args.src)
 
-        args.dst.write_bytes(out)
-        print(args.dst.name)
+    args.dst.write_bytes(out)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def main():
+def main() -> int:
     args = parse_args()
 
-    if not args.src or args.src.name == "-":
-        if not args.dst:
-            args.dst = Path("-")
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
-    else:
-        data = args.src.read_bytes()
+    data = (
+        read_stdin() if not args.src or args.src.name == "-" else args.src.read_bytes()
+    )
 
     if data[:4] == b"AAMP":
-        aamp_to_yml(args, data)
-
+        return aamp_to_yml(args, data)
     elif data[:3] == b"!io":
-        yml_to_aamp(args, data)
-
+        return yml_to_aamp(args, data)
     else:
         raise SystemExit("Invalid file")

@@ -1,16 +1,18 @@
 import argparse
-import sys
 from pathlib import Path
+
 import oead
 
+from .common import write_stdout, read_stdin
 
-def guess_dst(_yaz0: bool, path: Path):
+
+def guess_dst(_yaz0: bool, path: Path) -> Path:
     if _yaz0:
-        return path.with_suffix(f".s{path.suffix.lstrip('.')}")
-    return path.with_suffix(f".{path.suffix.lstrip('.s')}")
+        return path.with_suffix(f".s{path.suffix[1:]}")
+    return path.with_suffix(f".{path.suffix[2:]}")
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="De/compress a file using Yaz-0")
 
     parser.add_argument(
@@ -23,55 +25,50 @@ def parse_args():
         "dst",
         type=Path,
         nargs="?",
-        help="Destination file (writes to stdout if empty or '-')",
+        help="Destination file (writes to stdout if empty or '-', '!!' to guess filename)",
     )
 
     return parser.parse_args()
 
 
-def yaz(args: argparse.Namespace, data: bytes):
+def yaz(args: argparse.Namespace, data: bytes) -> int:
     compressed = oead.yaz0.compress(data)
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(compressed)
+        write_stdout(compressed)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(True, args.src)
+    if args.dst.name == "!!":
+        args.dst = guess_dst(True, args.src)
 
-        args.dst.write_bytes(compressed)
-        print(args.dst.name)
+    args.dst.write_bytes(compressed)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def unyaz(args: argparse.Namespace, data: bytes):
+def unyaz(args: argparse.Namespace, data: bytes) -> int:
     decompressed = oead.yaz0.decompress(data)
 
     if not args.dst or args.dst.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(decompressed)
+        write_stdout(decompressed)
+        return 0
 
-    elif args.dst:
-        if args.dst.name == "!!":
-            args.dst = guess_dst(False, args.src)
+    if args.dst.name == "!!":
+        args.dst = guess_dst(False, args.src)
 
-        args.dst.write_bytes(decompressed)
-        print(args.dst.name)
+    args.dst.write_bytes(decompressed)
+    write_stdout(f"{args.dst.name}\n".encode("utf-8"))
+    return 0
 
 
-def main():
+def main() -> int:
     args = parse_args()
 
-    if not args.src or args.src.name == "-":
-        if not args.dst:
-            args.dst = Path("-")
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
-    else:
-        data = args.src.read_bytes()
+    data = (
+        read_stdin() if not args.src or args.src.name == "-" else args.src.read_bytes()
+    )
 
     if data[:4] == b"Yaz0":
-        unyaz(args, data)
-
+        return unyaz(args, data)
     else:
-        yaz(args, data)
+        return yaz(args, data)
