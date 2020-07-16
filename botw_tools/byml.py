@@ -40,13 +40,14 @@ def byml_to_yml(args: argparse.Namespace, data: bytes):
     _byml = oead.byml.from_binary(data)
 
     if not args.dst or args.dst.name == "-":
-        print(oead.byml.to_text(_byml))
+        with sys.stdout.buffer as stdout:
+            stdout.write(oead.byml.to_text(_byml).encode("utf-8"))
 
     elif args.dst:
         if args.dst.name == "!!":
             args.dst = guess_dst(False, args.src)
 
-        args.dst.write_text(oead.byml.to_text(_byml))
+        args.dst.write_bytes(oead.byml.to_text(_byml).encode("utf-8"))
         print(args.dst.name)
 
 
@@ -70,7 +71,7 @@ def yml_to_byml(args: argparse.Namespace, data: bytes):
 def main():
     args = parse_args()
 
-    if not args.src or args.src.name== "-":
+    if not args.src or args.src.name == "-":
         with sys.stdin.buffer as stdin:
             data = stdin.read()
     else:

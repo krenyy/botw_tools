@@ -27,7 +27,9 @@ def read_actorinfo(args: argparse.Namespace):
         args.yaz0 = True
 
     if data[:2] not in (b"BY", b"YB"):
-        raise SystemExit(f"Invalid BYML file magic (expected b'BY' or b'YB', got {data[:2]})")
+        raise SystemExit(
+            f"Invalid BYML file magic (expected b'BY' or b'YB', got {data[:2]})"
+        )
 
     args.big_endian = BIG_ENDIAN[data[:2]]
 
@@ -119,7 +121,7 @@ def actorinfo_duplicate(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.name!= "-":
+    if args.actorinfo.name != "-":
         print(f"{args.entry_name_from} -> {args.entry_name_to}")
 
 
@@ -146,7 +148,7 @@ def actorinfo_edit(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.name!= "-":
+    if args.actorinfo.name != "-":
         print(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'")
 
 
@@ -175,7 +177,7 @@ def actorinfo_remove(args: argparse.Namespace):
 
     write_actorinfo(args, actorinfo)
 
-    if args.actorinfo.name!= "-":
+    if args.actorinfo.name != "-":
         print(msg)
 
 

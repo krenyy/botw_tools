@@ -37,13 +37,14 @@ def aamp_to_yml(args: argparse.Namespace, data: bytes):
     out = pio.to_text()
 
     if not args.dst or args.dst.name == "-":
-        print(out)
+        with sys.stdout.buffer as stdout:
+            stdout.write(out.encode("utf-8"))
 
     elif args.dst:
         if args.dst.name == "!!":
             args.dst = guess_dst(False, args.src)
 
-        args.dst.write_text(out)
+        args.dst.write_bytes(out.encode("utf-8"))
         print(args.dst.name)
 
 
@@ -66,7 +67,7 @@ def yml_to_aamp(args: argparse.Namespace, data: bytes):
 def main():
     args = parse_args()
 
-    if not args.src or args.src.name== "-":
+    if not args.src or args.src.name == "-":
         if not args.dst:
             args.dst = Path("-")
         with sys.stdin.buffer as stdin:

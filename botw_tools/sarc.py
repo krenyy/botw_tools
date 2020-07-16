@@ -50,7 +50,9 @@ def sarc_extract(args: argparse.Namespace):
             path = args.sarc.parent / args.sarc.stem / file.name
             msg = f"{args.sarc.stem}/{file.name}"
         else:
-            raise SystemExit("You must provide a destination folder when using input from pipe")
+            raise SystemExit(
+                "You must provide a destination folder when using input from pipe"
+            )
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(bytes(file.data))
@@ -67,7 +69,9 @@ def sarc_list(args: argparse.Namespace):
 
     if files:
         for file in sarc.get_files():
-            print(f"{file.name}{f' [{hex(len(file.data))}]' if args.show_sizes else ''}")
+            print(
+                f"{file.name}{f' [{hex(len(file.data))}]' if args.show_sizes else ''}"
+            )
     else:
         print(f"No files inside '{args.sarc.name}'")
 
@@ -80,9 +84,9 @@ def sarc_create(args: argparse.Namespace):
     if args.folder.name == "-":
         raise SystemExit("You cannot pipe in a folder")
 
-    for file in args.folder.glob("**/*.*"):
-        sarc.files[str(file)[len(str(args.folder)) + 1:]] = oead.Bytes(
-            file.read_bytes()
+    for f in args.folder.glob("**/*.*"):
+        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = oead.Bytes(
+            f.read_bytes()
         )
 
     if not args.sarc:
@@ -109,14 +113,16 @@ def sarc_update(args: argparse.Namespace):
     files = [f for f in args.folder.glob("**/*.*")]
 
     for f in files:
-        sarc.files[str(f)[len(str(args.folder)) + 1:]] = oead.Bytes(
+        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = oead.Bytes(
             f.read_bytes()
         )
 
     write_sarc(sarc, args.sarc)
 
     if args.sarc.name != "-":
-        updated = '\n'.join([f"Updated {str(f)[len(str(args.folder)) + 1:]}" for f in files])
+        updated = "\n".join(
+            [f"Updated {f.as_posix()[len(args.folder.as_posix()) + 1:]}" for f in files]
+        )
         print(updated)
 
 
@@ -143,7 +149,7 @@ def sarc_remove(args: argparse.Namespace):
     write_sarc(sarc, args.sarc)
 
     if args.sarc.name != "-":
-        removed = '\n'.join([f"Removed {f}" for f in removed_files])
+        removed = "\n".join([f"Removed {f}" for f in removed_files])
         print(removed if removed else "Nothing removed")
 
 
@@ -156,7 +162,12 @@ def parse_args():
     subparser_extract = subparsers.add_parser(
         "extract", help="Extract SARC archive", aliases=["x"]
     )
-    subparser_extract.add_argument("sarc", type=Path, nargs="?", help="SARC archive to extract (reads from stdin if empty or '-')")
+    subparser_extract.add_argument(
+        "sarc",
+        type=Path,
+        nargs="?",
+        help="SARC archive to extract (reads from stdin if empty or '-')",
+    )
     subparser_extract.add_argument(
         "folder", type=Path, nargs="?", help="Destination folder"
     )
@@ -165,7 +176,12 @@ def parse_args():
     subparser_list = subparsers.add_parser(
         "list", help="List contents of SARC archive", aliases=["l"]
     )
-    subparser_list.add_argument("sarc", type=Path, help="SARC to list contents of (reads from stdin if empty or '-')")
+    subparser_list.add_argument(
+        "sarc",
+        type=Path,
+        nargs="?",
+        help="SARC to list contents of (reads from stdin if empty or '-')",
+    )
     subparser_list.add_argument(
         "-s", "--show_sizes", action="store_true", help="Show sizes of files"
     )
@@ -179,14 +195,21 @@ def parse_args():
     )
     subparser_create.add_argument("folder", type=Path, help="Folder to convert to SARC")
     subparser_create.add_argument(
-        "sarc", type=Path, nargs="?", help="Destination SARC archive (writes to stdout if empty or '-')"
+        "sarc",
+        type=Path,
+        nargs="?",
+        help="Destination SARC archive (writes to stdout if empty or '-')",
     )
     subparser_create.set_defaults(func=sarc_create)
 
     subparser_update = subparsers.add_parser(
         "update", help="Update a SARC archive from a folder", aliases=["u"]
     )
-    subparser_update.add_argument("sarc", type=Path, help="SARC to update (reads from stdin if empty or '-', result will be written to stdout)")
+    subparser_update.add_argument(
+        "sarc",
+        type=Path,
+        help="SARC to update (reads from stdin if empty or '-', result will be written to stdout)",
+    )
     subparser_update.add_argument(
         "folder", type=Path, help="Folder to update the SARC from"
     )
@@ -195,7 +218,11 @@ def parse_args():
     subparser_remove = subparsers.add_parser(
         "remove", help="Remove files from SARC", aliases=["r"]
     )
-    subparser_remove.add_argument("sarc", type=Path, help="SARC to remove files from (reads from stdin if empty or '-', result will be written to stdout)")
+    subparser_remove.add_argument(
+        "sarc",
+        type=Path,
+        help="SARC to remove files from (reads from stdin if empty or '-', result will be written to stdout)",
+    )
     subparser_remove.add_argument(
         "files", type=str, nargs="+", help="Files to remove from the SARC"
     )
