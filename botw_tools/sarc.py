@@ -1,82 +1,42 @@
-import sys
-from pathlib import Path
 import argparse
+from pathlib import Path
+from typing import List
+
 import oead
 
+from .common import read_stdin, write_stdout
 
-def read_sarc(path: Path):
-    if path.name == "-":
-        with sys.stdin.buffer as stdin:
-            data = stdin.read()
 
+def read_sarc(path: Path) -> oead.Sarc:
+    if not path or path.name == "-":
+        data = read_stdin()
     elif path.is_file():
         data = path.read_bytes()
-
     else:
-        print(f"SARC '{path.name}' doesn't exist")
-
-        raise SystemExit(1)
+        raise SystemExit(f"'{path.name}' doesn't exist or is not a file")
 
     if data[:4] == b"Yaz0":
         raise SystemExit("File is Yaz-0 compressed")
 
     if data[:4] != b"SARC":
-        raise SystemExit("Invalid SARC file!")
+        raise SystemExit("Invalid file")
 
     return oead.Sarc(data)
 
 
-def write_sarc(sarc: oead.SarcWriter, path: Path):
+def write_sarc(sarc: oead.SarcWriter, path: Path) -> int:
     data = sarc.write()[1]
 
-    if path.name == "-":
-        with sys.stdout.buffer as stdout:
-            stdout.write(data)
-    else:
-        path.write_bytes(data)
+    write_stdout(
+        f"Written '{path.name}'\n".encode("utf-8")
+    ) if path and path.name != "-" else None
+
+    return (
+        write_stdout(data) if not path or path.name == "-" else path.write_bytes(data)
+    )
 
 
-def sarc_extract(args: argparse.Namespace):
-    if not args.sarc:
-        args.sarc = Path("-")
-
-    sarc = read_sarc(args.sarc)
-
-    for file in sarc.get_files():
-        if args.folder and args.folder.name != "-":
-            path = args.folder / file.name
-            msg = f"{args.folder}/{file.name}"
-        elif args.sarc and args.sarc.name != "-":
-            path = args.sarc.parent / args.sarc.stem / file.name
-            msg = f"{args.sarc.stem}/{file.name}"
-        else:
-            raise SystemExit(
-                "You must provide a destination folder when using input from pipe"
-            )
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(bytes(file.data))
-        print(msg)
-
-
-def sarc_list(args: argparse.Namespace):
-    if not args.sarc:
-        args.sarc = Path("-")
-
-    sarc = read_sarc(args.sarc)
-
-    files = [f for f in sarc.get_files()]
-
-    if files:
-        for file in sarc.get_files():
-            print(
-                f"{file.name}{f' [{hex(len(file.data))}]' if args.show_sizes else ''}"
-            )
-    else:
-        print(f"No files inside '{args.sarc.name}'")
-
-
-def sarc_create(args: argparse.Namespace):
+def sarc_create(args: argparse.Namespace) -> int:
     sarc = oead.SarcWriter(
         oead.Endianness.Big if args.big_endian else oead.Endianness.Little
     )
@@ -85,107 +45,108 @@ def sarc_create(args: argparse.Namespace):
         raise SystemExit("You cannot pipe in a folder")
 
     for f in args.folder.glob("**/*.*"):
-        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = oead.Bytes(
-            f.read_bytes()
-        )
+        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = f.read_bytes()
 
-    if not args.sarc:
-        args.sarc = Path("-")
-
-    elif args.sarc.name == "!!":
+    if args.sarc and args.sarc.name == "!!":
         args.sarc = args.folder.with_suffix(".pack")
 
+    if args.sarc and args.sarc.name != "-":
+        [write_stdout(f"{f}\n".encode("utf-8")) for f in sarc.files]
+
     write_sarc(sarc, args.sarc)
-
-    if args.sarc.name != "-":
-        print(args.sarc.name)
+    return 0
 
 
-def sarc_update(args: argparse.Namespace):
-    if not args.sarc:
-        args.sarc = Path("-")
+def sarc_extract(args: argparse.Namespace) -> int:
+    sarc = read_sarc(args.sarc)
 
+    if (not args.folder or args.folder.name == "!!") and (
+        args.sarc and args.sarc.name != "-"
+    ):
+        base = args.sarc.parent / args.sarc.stem
+    elif args.folder and args.folder.name != "-":
+        base = args.folder
+    else:
+        raise SystemExit(
+            "You must provide a destination folder when using input from pipe"
+        )
+
+    for file in sarc.get_files():
+        path = base / file.name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(file.data)
+        write_stdout(
+            f"{path.absolute().as_posix()[len(Path.cwd().as_posix()) + 1:]}\n".encode(
+                "utf-8"
+            )
+        )
+    return 0
+
+
+def sarc_list(args: argparse.Namespace) -> int:
+    sarc = read_sarc(args.sarc)
+
+    files: List[oead.File] = [f for f in sarc.get_files()]
+
+    if files:
+        for file in files:
+            write_stdout(
+                f"{file.name}{f' [{hex(len(file.data))} bytes]' if not args.hide_sizes else ''}\n".encode(
+                    "utf-8"
+                )
+            )
+    else:
+        raise SystemExit(f"No files inside '{args.sarc.name}'")
+    return 0
+
+
+def sarc_update(args: argparse.Namespace) -> int:
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
-    if args.folder.name == "-":
+    if not args.folder or args.folder.name == "-":
         raise SystemExit("You cannot pipe in a folder")
 
     files = [f for f in args.folder.glob("**/*.*")]
 
     for f in files:
-        sarc.files[f.as_posix()[len(args.folder.as_posix()) + 1 :]] = oead.Bytes(
-            f.read_bytes()
-        )
+        key = f.as_posix()[len(args.folder.as_posix()) + 1 :]
+        write_stdout(
+            f"{'Updated' if key in sarc.files else 'Added'} '{key}'".encode("utf-8")
+        ) if args.sarc and args.sarc.name != "-" else None
+        sarc.files[key] = f.read_bytes()
 
     write_sarc(sarc, args.sarc)
-
-    if args.sarc.name != "-":
-        updated = "\n".join(
-            [f"Updated {f.as_posix()[len(args.folder.as_posix()) + 1:]}" for f in files]
-        )
-        print(updated)
+    return 0
 
 
-def sarc_remove(args: argparse.Namespace):
-    if not args.sarc:
-        args.sarc = Path("-")
-
+def sarc_remove(args: argparse.Namespace) -> int:
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     if "-" in args.files:
         raise SystemExit("You cannot pipe in filenames to remove")
 
-    removed_files = []
-
     if "*" in args.files:
         sarc.files.clear()
-        removed_files.append("all")
+        write_stdout(
+            f"Removed all files\n".encode("utf-8")
+        ) if args.sarc and args.sarc.name != "-" else None
     else:
-        for file in sarc.files.items():
-            if file[0] in args.files:
-                del sarc.files[file[0]]
-                removed_files.append(file[0])
+        for file in sarc.files:
+            if file in args.files:
+                del sarc.files[file]
+                write_stdout(
+                    f"Removed {file}\n".encode("utf-8")
+                ) if args.sarc and args.sarc.name != "-" else None
 
     write_sarc(sarc, args.sarc)
-
-    if args.sarc.name != "-":
-        removed = "\n".join([f"Removed {f}" for f in removed_files])
-        print(removed if removed else "Nothing removed")
+    return 0
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manipulate SARC archives")
 
     subparsers = parser.add_subparsers(dest="subcommand", help="Subcommand")
     subparsers.required = True
-
-    subparser_extract = subparsers.add_parser(
-        "extract", help="Extract SARC archive", aliases=["x"]
-    )
-    subparser_extract.add_argument(
-        "sarc",
-        type=Path,
-        nargs="?",
-        help="SARC archive to extract (reads from stdin if empty or '-')",
-    )
-    subparser_extract.add_argument(
-        "folder", type=Path, nargs="?", help="Destination folder"
-    )
-    subparser_extract.set_defaults(func=sarc_extract)
-
-    subparser_list = subparsers.add_parser(
-        "list", help="List contents of SARC archive", aliases=["l"]
-    )
-    subparser_list.add_argument(
-        "sarc",
-        type=Path,
-        nargs="?",
-        help="SARC to list contents of (reads from stdin if empty or '-')",
-    )
-    subparser_list.add_argument(
-        "-s", "--show_sizes", action="store_true", help="Show sizes of files"
-    )
-    subparser_list.set_defaults(func=sarc_list)
 
     subparser_create = subparsers.add_parser(
         "create", help="Create a SARC archive from a folder", aliases=["c"]
@@ -202,12 +163,44 @@ def parse_args():
     )
     subparser_create.set_defaults(func=sarc_create)
 
+    subparser_extract = subparsers.add_parser(
+        "extract", help="Extract SARC archive", aliases=["x"]
+    )
+    subparser_extract.add_argument(
+        "sarc",
+        type=Path,
+        nargs="?",
+        help="SARC archive to extract (reads from stdin if empty or '-')",
+    )
+    subparser_extract.add_argument(
+        "folder",
+        type=Path,
+        nargs="?",
+        help="Destination folder ('!!' to guess folder name)",
+    )
+    subparser_extract.set_defaults(func=sarc_extract)
+
+    subparser_list = subparsers.add_parser(
+        "list", help="List contents of SARC archive", aliases=["l"]
+    )
+    subparser_list.add_argument(
+        "sarc",
+        type=Path,
+        nargs="?",
+        help="SARC to list contents of (reads from stdin if empty or '-')",
+    )
+    subparser_list.add_argument(
+        "-s", "--hide_sizes", action="store_true", help="Hide sizes of files"
+    )
+    subparser_list.set_defaults(func=sarc_list)
+
     subparser_update = subparsers.add_parser(
         "update", help="Update a SARC archive from a folder", aliases=["u"]
     )
     subparser_update.add_argument(
         "sarc",
         type=Path,
+        nargs="?",
         help="SARC to update (reads from stdin if empty or '-', result will be written to stdout)",
     )
     subparser_update.add_argument(
@@ -221,6 +214,7 @@ def parse_args():
     subparser_remove.add_argument(
         "sarc",
         type=Path,
+        nargs="?",
         help="SARC to remove files from (reads from stdin if empty or '-', result will be written to stdout)",
     )
     subparser_remove.add_argument(
@@ -231,6 +225,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> int:
     args = parse_args()
-    args.func(args)
+
+    return args.func(args)
