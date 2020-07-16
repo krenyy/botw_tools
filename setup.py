@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="botw_tools",
-    version="0.4.0",
+    version="0.4.1",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A collection of tools for modding Breath of the Wild",
