@@ -34,7 +34,7 @@ def write_actorinfo(args: argparse.Namespace, actorinfo: oead.byml.Hash) -> int:
     data = oead.byml.to_binary(actorinfo, args.big_endian)
     data = oead.yaz0.compress(data) if args.yaz0 else data
 
-    return write(data=data, dst=args.actorinfo)
+    return write(data=data, src=None, dst=args.actorinfo, condition=None, function=None)
 
 
 def convert_hash(x: int) -> Union[oead.S32, oead.U32]:
