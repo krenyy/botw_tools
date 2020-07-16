@@ -2,10 +2,15 @@ import sys
 
 
 def read_stdin() -> bytes:
-    with sys.stdin.buffer as stdin:
-        return stdin.read()
+    try:
+        return sys.stdin.buffer.read()
+    except KeyboardInterrupt:
+        write_stdout("\n".encode("utf-8"))
+        raise SystemExit()
 
 
 def write_stdout(data: bytes) -> int:
-    with sys.stdout.buffer as stdout:
-        return stdout.write(data)
+    try:
+        return sys.stdout.buffer.write(data)
+    except BrokenPipeError:
+        raise SystemExit()
