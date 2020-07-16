@@ -1,4 +1,7 @@
 .idea
 botw_tools/__main__.py
+build
+botw_tools.egg-info
+dist
 venv
 update.sh
