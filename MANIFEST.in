@@ -1,2 +1,6 @@
 include requirements.txt
 exclude botw_tools/__main__.py
+
+include windows_context_menu/install.reg
+include windows_context_menu/uninstall.reg
+include windows_context_menu/screenshot.png
