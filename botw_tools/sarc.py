@@ -9,9 +9,8 @@ from .common import write_stdout, read, write
 
 def read_sarc(src: Path) -> oead.Sarc:
     data = read(src=src)
+    data = oead.yaz0.decompress(data) if data[:4] == b"Yaz0" else data
 
-    if data[:4] == b"Yaz0":
-        raise SystemExit("File is Yaz-0 compressed")
     if data[:4] != b"SARC":
         raise SystemExit("Invalid file")
 
@@ -47,26 +46,22 @@ def sarc_create(args: argparse.Namespace) -> int:
 def sarc_extract(args: argparse.Namespace) -> int:
     sarc = read_sarc(args.sarc)
 
-    if (not args.folder or args.folder.name == "!!") and (
-        args.sarc and args.sarc.name != "-"
-    ):
+    if args.folder.name == "!!" and args.sarc and args.sarc.name != "-":
         base = args.sarc.parent / args.sarc.stem
-    elif args.folder and args.folder.name != "-":
+    elif args.folder.name not in ("-", "!!"):
         base = args.folder
     else:
         raise SystemExit(
-            "You must provide a destination folder when using input from pipe"
+            "Destination directory cannot be '!!' when using input from pipe"
         )
-
-    if args.folder.exists():
-        raise SystemExit(f"'{args.folder.name}' already exists")
 
     for file in sarc.get_files():
         path = base / file.name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(file.data)
+        dst_str = path.absolute().as_posix()[len(Path.cwd().as_posix()) + 1 :]
         write_stdout(
-            f"{path.absolute().as_posix()[len(Path.cwd().as_posix()) + 1:]}\n".encode(
+            (f"{dst_str}\n" if args.simple else f"Written '{dst_str}'\n").encode(
                 "utf-8"
             )
         )
@@ -86,7 +81,7 @@ def sarc_list(args: argparse.Namespace) -> int:
                 )
             )
     else:
-        raise SystemExit(f"No files inside '{args.sarc.name}'")
+        raise SystemExit(f"No files inside '{args.sarc.name if args.sarc else '-'}'")
     return 0
 
 
@@ -96,15 +91,12 @@ def sarc_update(args: argparse.Namespace) -> int:
     if not args.folder or args.folder.name == "-":
         raise SystemExit("You cannot pipe in a folder")
 
-    if args.folder.exists():
-        raise SystemExit(f"'{args.folder.name}' already exists")
-
     files = [f for f in args.folder.glob("**/*.*")]
 
     for f in files:
         key = f.as_posix()[len(args.folder.as_posix()) + 1 :]
         write_stdout(
-            f"{'Updated' if key in sarc.files else 'Added'} '{key}'".encode("utf-8")
+            f"{'Updated' if key in sarc.files else 'Added'} '{key}'\n".encode("utf-8")
         ) if args.sarc and args.sarc.name != "-" else None
         sarc.files[key] = f.read_bytes()
 
@@ -166,10 +158,13 @@ def parse_args() -> argparse.Namespace:
         help="SARC archive to extract (reads from stdin if empty or '-')",
     )
     subparser_extract.add_argument(
-        "folder",
-        type=Path,
-        nargs="?",
-        help="Destination folder ('!!' to guess folder name)",
+        "folder", type=Path, help="Destination folder ('!!' to guess folder name)",
+    )
+    subparser_extract.add_argument(
+        "-s",
+        "--simple",
+        action="store_true",
+        help="Simplified output (without 'Written' and ''')",
     )
     subparser_extract.set_defaults(func=sarc_extract)
 

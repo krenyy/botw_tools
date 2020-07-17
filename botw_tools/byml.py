@@ -8,9 +8,17 @@ from .common import read_stdin, write_stdout, write, read
 
 def guess_dst(_byml: bool, dst: Path) -> Path:
     if "mubin" in dst.name:
-        return dst.with_name(".".join(dst.name.split(".")[:2])) if _byml else path.with_suffix(".mubin.yml")
+        return (
+            dst.with_name(".".join(dst.name.split(".")[:2]))
+            if _byml
+            else dst.with_suffix(".mubin.yml")
+        )
     else:
-        return dst.with_suffix(f".b{dst.suffix[1:]}") if _byml else path.with_suffix(f".{path.suffix[2:]}")
+        return (
+            dst.with_suffix(f".b{dst.suffix[1:]}")
+            if _byml
+            else dst.with_suffix(f".{dst.suffix[2:]}")
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -47,9 +55,7 @@ def yml_to_byml(args: argparse.Namespace, data: bytes) -> int:
         out = oead.byml.to_binary(
             oead.byml.from_text(data.decode("utf-8")), args.big_endian
         )
-    except Exception as e:
-        write_stdout(f"{type(e)}\n".encode('utf-8'))
-        write_stdout(f"{str(e)}\n".encode('utf-8'))
+    except Exception:
         raise SystemExit("Invalid file")
 
     write(data=out, src=args.src, dst=args.dst, condition=True, function=guess_dst)
@@ -60,9 +66,8 @@ def yml_to_byml(args: argparse.Namespace, data: bytes) -> int:
 def main() -> int:
     args = parse_args()
     data = read(args.src)
+    data = oead.yaz0.decompress(data) if data[:4] == b"Yaz0" else data
 
-    if data[:4] == b"Yaz0":
-        raise SystemExit("File is Yaz-0 compressed")
     if data[:2] in (b"BY", b"YB"):
         return byml_to_yml(args, data)
     else:

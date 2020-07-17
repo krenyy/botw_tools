@@ -7,7 +7,11 @@ from .common import read, write
 
 
 def guess_dst(_yaz0: bool, dst: Path) -> Path:
-    return dst.with_suffix(f".s{dst.suffix[1:]}") if _yaz0 else dst.with_suffix(f".{dst.suffix[2:]}")
+    return (
+        dst.with_suffix(f".s{dst.suffix[1:]}")
+        if _yaz0
+        else dst.with_suffix(f".{dst.suffix[2:]}")
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,14 +35,22 @@ def parse_args() -> argparse.Namespace:
 
 def yaz(args: argparse.Namespace, data: bytes) -> int:
     compressed = oead.yaz0.compress(data)
-    write(data=compressed, src=args.src, dst=args.dst, condition=True, function=guess_dst)
+    write(
+        data=compressed, src=args.src, dst=args.dst, condition=True, function=guess_dst
+    )
 
     return 0
 
 
 def unyaz(args: argparse.Namespace, data: bytes) -> int:
     decompressed = oead.yaz0.decompress(data)
-    write(data=decompressed, src=args.src, dst=args.dst, condition=False, function=guess_dst)
+    write(
+        data=decompressed,
+        src=args.src,
+        dst=args.dst,
+        condition=False,
+        function=guess_dst,
+    )
 
     return 0
 

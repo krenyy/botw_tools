@@ -8,12 +8,14 @@ from .common import write, read
 
 def guess_dst(_aamp: bool, dst: Path) -> Path:
     return (
-        dst.with_name(f"{dst.stem}.aamp")
-        if dst.name.count(".") < 2
-        else dst.with_name(
-            f"{dst.name.split('.')[0]}.b{dst.name.split('.')[-2]}"
+        (
+            dst.with_name(f"{dst.stem}.aamp")
+            if dst.name.count(".") < 2
+            else dst.with_name(f"{dst.name.split('.')[0]}.b{dst.name.split('.')[-2]}")
         )
-    ) if _aamp else dst.with_suffix(f".{dst.suffix[2:]}.yml")
+        if _aamp
+        else dst.with_suffix(f".{dst.suffix[2:]}.yml")
+    )
 
 
 def parse_args() -> argparse.Namespace:

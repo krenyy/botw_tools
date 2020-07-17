@@ -17,12 +17,16 @@ def read_actorinfo(args: argparse.Namespace) -> oead.byml.Hash:
         data = oead.yaz0.decompress(data)
         args.yaz0 = True
 
-    if data[:2] not in (b"BY", b"YB"):
-        raise SystemExit(f"Invalid file")
+    args.binary = False
+    if data[:2] in (b"BY", b"YB"):
+        args.binary = True
+        args.big_endian = True if data[:2] == b"BY" else False
 
-    args.big_endian = True if data[:2] == b"BY" else False
-
-    actorinfo = oead.byml.from_binary(data)
+    actorinfo = (
+        oead.byml.from_binary(data)
+        if args.binary
+        else oead.byml.from_text(data.decode("utf-8"))
+    )
 
     if ("Actors", "Hashes") != tuple(actorinfo.keys()):
         raise SystemExit("Invalid file")
@@ -31,7 +35,11 @@ def read_actorinfo(args: argparse.Namespace) -> oead.byml.Hash:
 
 
 def write_actorinfo(args: argparse.Namespace, actorinfo: oead.byml.Hash) -> int:
-    data = oead.byml.to_binary(actorinfo, args.big_endian)
+    data = (
+        oead.byml.to_binary(actorinfo, args.big_endian)
+        if args.binary
+        else oead.byml.to_text(actorinfo).encode("utf-8")
+    )
     data = oead.yaz0.compress(data) if args.yaz0 else data
 
     return write(data=data, src=None, dst=args.actorinfo, condition=None, function=None)
@@ -55,7 +63,9 @@ def actorinfo_get(args: argparse.Namespace):
     entry = actorinfo["Actors"][entry_index]
 
     try:
-        write_stdout(oead.byml.to_text(entry[args.key] if args.key else entry).encode('utf-8'))
+        write_stdout(
+            oead.byml.to_text(entry[args.key] if args.key else entry).encode("utf-8")
+        )
     except KeyError:
         raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
 
@@ -100,8 +110,9 @@ def actorinfo_duplicate(args: argparse.Namespace) -> int:
     actorinfo["Hashes"].insert(entry_index_to, convert_hash(entry_hash_to))
     actorinfo["Actors"].insert(entry_index_to, entry)
 
-    write_stdout(f"{args.entry_name_from} -> {args.entry_name_to}".encode(
-        'utf-8')) if args.actorinfo and args.actorinfo.name != '-' else None
+    write_stdout(
+        f"{args.entry_name_from} -> {args.entry_name_to}".encode("utf-8")
+    ) if args.actorinfo and args.actorinfo.name != "-" else None
     write_actorinfo(args, actorinfo)
     return 0
 
@@ -127,8 +138,11 @@ def actorinfo_edit(args: argparse.Namespace) -> int:
     entry[args.key] = args.value
     value_after = entry[args.key]
 
-    write_stdout(f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'".encode(
-        'utf-8')) if args.actorinfo and args.actorinfo.name != '-' else None
+    write_stdout(
+        f"{args.entry_name}['{args.key}']: '{value_before}' -> '{value_after}'".encode(
+            "utf-8"
+        )
+    ) if args.actorinfo and args.actorinfo.name != "-" else None
     write_actorinfo(args, actorinfo)
     return 0
 
@@ -148,15 +162,15 @@ def actorinfo_remove(args: argparse.Namespace) -> int:
     if not args.key:
         actorinfo["Hashes"].pop(entry_index)
         actorinfo["Actors"].pop(entry_index)
-        msg = f"{args.entry_name} removed".encode('utf-8')
+        msg = f"{args.entry_name} removed".encode("utf-8")
     else:
         try:
             del actorinfo["Actors"][entry_index][args.key]
         except KeyError:
             raise SystemExit(f"Key '{args.key}' doesn't exist in '{args.entry_name}'")
-        msg = f"{args.entry_name}['{args.key}'] removed".encode('utf-8')
+        msg = f"{args.entry_name}['{args.key}'] removed".encode("utf-8")
 
-    write_stdout(msg) if args.actorinfo and args.actorinfo.name != '-' else None
+    write_stdout(msg) if args.actorinfo and args.actorinfo.name != "-" else None
     write_actorinfo(args, actorinfo)
     return 0
 

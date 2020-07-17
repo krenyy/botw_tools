@@ -27,8 +27,13 @@ def read(src: Optional[Path]) -> bytes:
         raise SystemExit(f"'{src.name}' doesn't exist or is not a file")
 
 
-def write(data: bytes, src: Optional[Path], dst: Optional[Path], condition: Optional[bool],
-          function: Optional[Callable]) -> int:
+def write(
+    data: bytes,
+    src: Optional[Path],
+    dst: Path,
+    condition: Optional[bool],
+    function: Optional[Callable],
+) -> int:
     if not dst or dst.name == "-":
         return write_stdout(data)
 
@@ -38,6 +43,6 @@ def write(data: bytes, src: Optional[Path], dst: Optional[Path], condition: Opti
 
     dst.parent.mkdir(parents=True, exist_ok=True)
     ret = dst.write_bytes(data)
-    write_stdout(f"\nWritten '{dst.name}'\n".encode('utf-8'))
+    write_stdout(f"Written '{dst.name}'\n".encode("utf-8"))
 
     return ret
