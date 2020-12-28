@@ -8,13 +8,16 @@
 * `sarc`: Manipulate SARC archives
 * `actorinfo`: Manipulate ActorInfo file
 
-All commands can read from stdin and write to stdout, either automatically or by explicitly using the pipe (`-`) character instead of file path.
+All commands can read from stdin and write to stdout, either automatically or by explicitly using the pipe (`-`)
+character instead of file path.
 
-To see how to use these commands, please refer either to `command --help` (ex. `aamp --help`) or the examples below.
+To see how to use these commands, please refer either to `command --help` (ex. `aamp --help`), or the examples below.
 
 ### Examples:
+
 #### AAMP:
-```shell script
+
+```sh
 # View a AAMP file
 aamp DgnObj_EntranceElevatorSP.bphysics
 
@@ -23,8 +26,10 @@ aamp DgnObj_EntranceElevatorSP.bphysics \!!  # Saves as 'DgnObj_EntranceElevator
 # or
 aamp DgnObj_EntranceElevatorSP.bphysics test.yml
 ```
+
 #### Yaz0 and BYML:
-```shell script
+
+```sh
 # View a BYML file
 
 # First variant
@@ -46,10 +51,12 @@ byml ActorInfo.product.byml \!!  # Saves as 'ActorInfo.product.yml'
 # or
 byml ActorInfo.product.byml actorinfo.yml
 ```
+
 #### Yaz0 and SARC:
 
 Decompress and extract a SARC archive `DgnObj_EntranceElevatorSP.sbactorpack` to `elevator` folder:
-```shell script
+
+```sh
 # First variant
 yaz0 DgnObj_EntranceElevatorSP.sbactorpack | sarc e(x)tract - elevator
 
@@ -57,8 +64,10 @@ yaz0 DgnObj_EntranceElevatorSP.sbactorpack | sarc e(x)tract - elevator
 yaz0 DgnObj_EntranceElevatorSP.sbactorpack \!!
 sarc x DgnObj_EntranceElevatorSP.bactorpack elevator
 ```
+
 Remove all files inside SARC:
-```shell script
+
+```sh
 # First variant
 yaz0 DgnObj_EntranceElevatorSP.sbactorpack | sarc (r)emove - \* | yaz0 - Empty.sbactorpack
 
@@ -69,16 +78,17 @@ yaz0 DgnObj_EntranceElevatorSP.bactorpack Empty.sbactorpack
 ```
 
 #### ActorInfo:
-```shell script
+
+```sh
 # Get an entry
-actorinfo ActorInfo.product.(s)byml (g)et DgnObj_EntranceElevatorSP
+actorinfo ActorInfo.product.sbyml get DgnObj_EntranceElevatorSP
+actorinfo ActorInfo.product.sbyml g DgnObj_EntranceElevatorSP
 
 # Duplicate an entry
-actorinfo ActorInfo.product.(s)byml (d)uplicate DgnObj_EntranceElevatorSP MyCustomEntranceElevator
+actorinfo ActorInfo.product.sbyml duplicate DgnObj_EntranceElevatorSP MyCustomEntranceElevator
+actorinfo ActorInfo.product.byml d DgnObj_EntranceElevatorSP MyCustomEntranceElevator
 
 # Change entry keys
-actorinfo ActorInfo.product.(s)byml (e)dit MyCustomEntranceElevator bfres MyCustomEntranceElevatorBfres
-
-# Get the new entry
-actorinfo ActorInfo.product.(s)byml g MyCustomEntranceElevator
+actorinfo ActorInfo.product.sbyml edit MyCustomEntranceElevator bfres MyCustomEntranceElevatorBfres
+actorinfo ActorInfo.product.byml e MyCustomEntranceElevator bfres MyCustomEntranceElevatorBfres
 ```
