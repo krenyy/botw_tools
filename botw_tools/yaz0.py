@@ -33,33 +33,33 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def yaz(args: argparse.Namespace, data: bytes) -> int:
-    compressed = oead.yaz0.compress(data)
+def yaz(args: argparse.Namespace, data: bytes) -> None:
     write(
-        data=compressed, src=args.src, dst=args.dst, condition=True, function=guess_dst
+        data=oead.yaz0.compress(data),
+        src=args.src,
+        dst=args.dst,
+        condition=True,
+        function=guess_dst,
     )
+    return
 
-    return 0
 
-
-def unyaz(args: argparse.Namespace, data: bytes) -> int:
-    decompressed = oead.yaz0.decompress(data)
+def unyaz(args: argparse.Namespace, data: bytes) -> None:
     write(
-        data=decompressed,
+        data=oead.yaz0.decompress(data),
         src=args.src,
         dst=args.dst,
         condition=False,
         function=guess_dst,
     )
+    return
 
-    return 0
 
-
-def main() -> int:
+def main() -> None:
     args = parse_args()
     data = read(args.src)
 
     if data[:4] == b"Yaz0":
         return unyaz(args, data)
-    else:
-        return yaz(args, data)
+
+    return yaz(args, data)

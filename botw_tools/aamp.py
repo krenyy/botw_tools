@@ -3,7 +3,7 @@ from pathlib import Path
 
 import oead
 
-from .common import write, read
+from .common import read, write
 
 
 def guess_dst(_aamp: bool, dst: Path) -> Path:
@@ -37,27 +37,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def aamp_to_yml(args: argparse.Namespace, data: bytes) -> int:
+def aamp_to_yml(args: argparse.Namespace, data: bytes) -> None:
+    # noinspection PyArgumentList
     out = oead.aamp.ParameterIO.from_binary(data).to_text().encode("utf-8")
     write(data=out, src=args.src, dst=args.dst, condition=False, function=guess_dst)
+    return
 
-    return 0
 
-
-def yml_to_aamp(args: argparse.Namespace, data: bytes) -> int:
+def yml_to_aamp(args: argparse.Namespace, data: bytes) -> None:
+    # noinspection PyArgumentList
     out = oead.aamp.ParameterIO.from_text(data.decode("utf-8")).to_binary()
     write(data=out, src=args.src, dst=args.dst, condition=True, function=guess_dst)
+    return
 
-    return 0
 
-
-def main() -> int:
+def main() -> None:
     args = parse_args()
     data = read(src=args.src)
 
     if data[:4] == b"AAMP":
         return aamp_to_yml(args, data)
-    elif data[:3] == b"!io":
+
+    if data[:3] == b"!io":
         return yml_to_aamp(args, data)
-    else:
-        raise SystemExit("Invalid file")
+
+    raise SystemExit("Invalid file")

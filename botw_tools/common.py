@@ -21,10 +21,11 @@ def write_stdout(data: bytes) -> int:
 def read(src: Optional[Path]) -> bytes:
     if not src or src.name == "-":
         return read_stdin()
-    elif src.is_file():
+
+    if src.is_file():
         return src.read_bytes()
-    else:
-        raise SystemExit(f"'{src.name}' doesn't exist or is not a file")
+
+    raise SystemExit(f"'{src.name}' doesn't exist or is not a file")
 
 
 def write(

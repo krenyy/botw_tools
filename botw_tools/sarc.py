@@ -4,7 +4,7 @@ from typing import List
 
 import oead
 
-from .common import write_stdout, read, write
+from .common import read, write, write_stdout
 
 
 def read_sarc(src: Path) -> oead.Sarc:
@@ -21,7 +21,7 @@ def write_sarc(sarc: oead.SarcWriter, dst: Path) -> int:
     return write(data=sarc.write()[1], src=None, dst=dst, condition=None, function=None)
 
 
-def sarc_create(args: argparse.Namespace) -> int:
+def sarc_create(args: argparse.Namespace) -> None:
     sarc = oead.SarcWriter(
         oead.Endianness.Big if args.big_endian else oead.Endianness.Little
     )
@@ -40,10 +40,10 @@ def sarc_create(args: argparse.Namespace) -> int:
         [write_stdout(f"{f}\n".encode("utf-8")) for f in sarc.files]
 
     write_sarc(sarc, args.sarc)
-    return 0
+    return
 
 
-def sarc_extract(args: argparse.Namespace) -> int:
+def sarc_extract(args: argparse.Namespace) -> None:
     sarc = read_sarc(args.sarc)
 
     if args.folder.name == "!!" and args.sarc and args.sarc.name != "-":
@@ -65,10 +65,10 @@ def sarc_extract(args: argparse.Namespace) -> int:
                 "utf-8"
             )
         )
-    return 0
+    return
 
 
-def sarc_list(args: argparse.Namespace) -> int:
+def sarc_list(args: argparse.Namespace) -> None:
     sarc = read_sarc(args.sarc)
 
     files: List[oead.File] = [f for f in sarc.get_files()]
@@ -80,12 +80,13 @@ def sarc_list(args: argparse.Namespace) -> int:
                     "utf-8"
                 )
             )
-    else:
-        raise SystemExit(f"No files inside '{args.sarc.name if args.sarc else '-'}'")
-    return 0
+        return
+
+    raise SystemExit(f"No files inside '{args.sarc.name if args.sarc else '-'}'")
 
 
-def sarc_update(args: argparse.Namespace) -> int:
+def sarc_update(args: argparse.Namespace) -> None:
+    # noinspection PyArgumentList
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     if not args.folder or args.folder.name == "-":
@@ -101,10 +102,11 @@ def sarc_update(args: argparse.Namespace) -> int:
         sarc.files[key] = f.read_bytes()
 
     write_sarc(sarc, args.sarc)
-    return 0
+    return
 
 
-def sarc_remove(args: argparse.Namespace) -> int:
+def sarc_remove(args: argparse.Namespace) -> None:
+    # noinspection PyArgumentList
     sarc = oead.SarcWriter.from_sarc(read_sarc(args.sarc))
 
     if "-" in args.files:
@@ -120,11 +122,11 @@ def sarc_remove(args: argparse.Namespace) -> int:
             if file in args.files:
                 del sarc.files[file]
                 write_stdout(
-                    f"Removed {file}\n".encode("utf-8")
+                    f"Removed '{file}'\n".encode("utf-8")
                 ) if args.sarc and args.sarc.name != "-" else None
 
     write_sarc(sarc, args.sarc)
-    return 0
+    return
 
 
 def parse_args() -> argparse.Namespace:
@@ -158,7 +160,9 @@ def parse_args() -> argparse.Namespace:
         help="SARC archive to extract (reads from stdin if empty or '-')",
     )
     subparser_extract.add_argument(
-        "folder", type=Path, help="Destination folder ('!!' to guess folder name)",
+        "folder",
+        type=Path,
+        help="Destination folder ('!!' to guess folder name)",
     )
     subparser_extract.add_argument(
         "-s",
@@ -213,6 +217,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
+def main() -> None:
     args = parse_args()
     return args.func(args)
